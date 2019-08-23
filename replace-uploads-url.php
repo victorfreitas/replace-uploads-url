@@ -4,17 +4,19 @@
  * Plugin URI:  https://github.com/victorfreitas/replace-uploads-url
  * Description: Replace development environment to production uploads url
  * Author:      Victor Freitas
- * Version:     1.0.0
+ * Version:     2.0.0
  */
-if ( ! defined( 'ABSPATH' ) ) {
-    exit(0);
+defined( 'ABSPATH' ) || exit(1);
+
+if ( ! defined( 'RUU_PRODUCTION_URL' ) ) {
+    define( 'RUU_PRODUCTION_URL', '' );
 }
 
 class Replace_Uploads_Url {
 
     private static $instance = null;
 
-    public $production_url;
+    public $production_url = RUU_PRODUCTION_URL;
 
     public $option_name = 'ruu_production_url';
 
@@ -23,13 +25,21 @@ class Replace_Uploads_Url {
     public $title = 'Replace Uploads URL';
 
     private function __construct() {
-    	$this->set_production_url();
+        if ( $this->production_url_option() ) {
+            $this->init_actions();
+        }
+    }
+
+    public function production_url_option() {
+        if ( ! empty( $this->production_url ) ) {
+            return true;
+        }
+
+        $this->set_production_url();
 
         add_action( 'admin_init',  array( $this, 'register_option' ) );
 
-        if ( $this->production_url ) {
-            $this->init_actions();
-        }
+        return ! empty( $this->production_url );
     }
 
     public function init_actions() {
@@ -50,9 +60,14 @@ class Replace_Uploads_Url {
         ob_start( array( $this, 'replace' ) );
     }
 
+	public function get_domain_host()
+	{
+		return parse_url(get_site_url(), PHP_URL_HOST);
+	}
+
     public function replace( $content ) {
         preg_match_all(
-            '/https?:\/\/[\S]+\.(jpg|jpeg|png|gif|svg)/',
+            "/https?:\/\/.+[{$this->get_domain_host()}].+\.(jpe?g|png|gif|svg)/",
             $content,
             $images_match
         );
@@ -75,7 +90,7 @@ class Replace_Uploads_Url {
     }
 
     public function set_production_url() {
-    	$this->production_url = untrailingslashit( $this->get_option() );
+        $this->production_url = untrailingslashit( $this->get_option() );
     }
 
     public function indexof( $value, $search ) {
@@ -160,4 +175,5 @@ class Replace_Uploads_Url {
         return self::$instance;
     }
 }
-add_action( 'plugins_loaded', array( 'Replace_Uploads_Url', 'instance' ), 0 );
+
+add_action( 'plugins_loaded', array( 'Replace_Uploads_Url', 'instance' ), -1 );
