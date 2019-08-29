@@ -4,9 +4,9 @@
  * Plugin URI:  https://github.com/victorfreitas/replace-uploads-url
  * Description: Replace development environment to production uploads url
  * Author:      Victor Freitas
- * Version:     2.0.0
+ * Version:     2.0.1
  */
-defined( 'ABSPATH' ) || exit(1);
+defined( 'ABSPATH' ) || exit;
 
 if ( ! defined( 'RUU_PRODUCTION_URL' ) ) {
     define( 'RUU_PRODUCTION_URL', '' );
@@ -60,14 +60,13 @@ class Replace_Uploads_Url {
         ob_start( array( $this, 'replace' ) );
     }
 
-	public function get_domain_host()
-	{
+	public function get_domain_host() {
 		return parse_url(get_site_url(), PHP_URL_HOST);
 	}
 
     public function replace( $content ) {
         preg_match_all(
-            "/https?:\/\/.+[{$this->get_domain_host()}].+\.(jpe?g|png|gif|svg)/",
+            "#(https?:\/\/){$this->get_domain_host()}[/|.|\w|-]*\.(jpe?g|gif|png|svg)#",
             $content,
             $images_match
         );
@@ -78,13 +77,13 @@ class Replace_Uploads_Url {
 
         $images = array_unique( $images_match[0] );
 
-        foreach ( $images as $image_url ) :
+        foreach ( $images as $image_url ) {
+            $new_image_url = $this->parse_thumb_url( $image_url );
 
-            if ( $new_image_url = $this->parse_thumb_url( $image_url ) ) {
+            if ( $new_image_url ) {
                 $content = str_replace( $image_url, $new_image_url, $content );
             }
-
-        endforeach;
+        }
 
         return $content;
     }
@@ -104,11 +103,7 @@ class Replace_Uploads_Url {
     public function get_uri( $url ) {
         $uri = $this->get_relative_uri( $url );
 
-        if ( file_exists( ABSPATH . $uri ) ) {
-            return false;
-        }
-
-        return $uri;
+        return file_exists( ABSPATH . $uri ) ? false : $uri;
     }
 
     public function parse_thumb_url( $url ) {
@@ -119,7 +114,7 @@ class Replace_Uploads_Url {
         return sprintf( '%s/%s', $this->production_url, $uri );
     }
 
-    public function image_srcset( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
+    public function image_srcset( $sources ) {
         foreach ( $sources as $key => $source ) :
             $source['url']   = $this->parse_thumb_url( $source['url'] );
             $sources[ $key ] = $source;
@@ -153,11 +148,13 @@ class Replace_Uploads_Url {
 
     public function render_field() {
         printf(
-            '<input type="url"
-                    name="%s"
-                    class="regular-text"
-                    value="%s"
-                    placeholder="Enter your production URL">',
+            '<input
+                type="url"
+                name="%s"
+                class="regular-text"
+                value="%s"
+                placeholder="Enter your production URL"
+            >',
             $this->option_name,
             $this->get_option()
         );
