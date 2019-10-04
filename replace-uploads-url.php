@@ -4,7 +4,7 @@
  * Plugin URI:  https://github.com/victorfreitas/replace-uploads-url
  * Description: Replace development environment to production uploads url
  * Author:      Victor Freitas
- * Version:     2.0.1
+ * Version:     2.1
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -23,6 +23,8 @@ class Replace_Uploads_Url {
     public $field_section = 'ruu_field_section';
 
     public $title = 'Replace Uploads URL';
+
+    public $extensions = [ 'jpe?g', 'gif', 'png', 'svg', 'webp', 'mp4', 'pdf', 'docx?' ];
 
     private function __construct() {
         if ( $this->production_url_option() ) {
@@ -60,16 +62,24 @@ class Replace_Uploads_Url {
         ob_start( array( $this, 'replace' ) );
     }
 
-	public function get_domain_host() {
-		return parse_url(get_site_url(), PHP_URL_HOST);
-	}
+    public function get_domain_host() {
+        return parse_url(get_site_url(), PHP_URL_HOST);
+    }
+
+    public function get_extensions() {
+        return implode( '|', $this->extensions );
+    }
+
+    public function get_pattern() {
+        return sprintf(
+            '#(https?:\/\/)%s[/|.|\w|-]*\.(%s)#',
+            $this->get_domain_host(),
+            $this->get_extensions()
+        );
+    }
 
     public function replace( $content ) {
-        preg_match_all(
-            "#(https?:\/\/){$this->get_domain_host()}[/|.|\w|-]*\.(jpe?g|gif|png|svg)#",
-            $content,
-            $images_match
-        );
+        preg_match_all( $this->get_pattern(), $content, $images_match );
 
         if ( empty( $images_match[0] ) ) {
             return $content;
